@@ -1,0 +1,756 @@
+{
+  "info": {
+    "_postman_id": "a9b8c7d6-e5f4-4321-abcd-ef0123456789",
+    "name": "AuraAuth - Complete API & Point Testing Suite",
+    "description": "Comprehensive Postman test collection with automated test scripts, environment variables, positive/negative test points, security test points, and session handling.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/registration%20login%20page",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "csrf_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_username",
+      "value": "postman_user_99",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "postman_user_99@example.com",
+      "type": "string"
+    },
+    {
+      "key": "test_password",
+      "value": "SecurePass123!",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. REST API - Core Authentication",
+      "item": [
+        {
+          "name": "01. Register - Success (Positive Test Point)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique timestamp for username & email to ensure repeatability",
+                  "const rand = Math.floor(Math.random() * 10000);",
+                  "pm.collectionVariables.set('test_username', 'user_' + rand);",
+                  "pm.collectionVariables.set('test_email', 'user_' + rand + '@example.com');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response contains success status and user data', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
+                  "    pm.expect(res.data).to.have.property('id');",
+                  "    pm.expect(res.data.username).to.eql(pm.collectionVariables.get('test_username'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Postman QA Tester\",\n  \"username\": \"{{test_username}}\",\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"confirm_password\": \"{{test_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/register.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "register.php"]
+            },
+            "description": "Positive test point: Registers a brand new user. Automatically generates unique username/email before request."
+          }
+        },
+        {
+          "name": "02. Register - Duplicate User (Negative Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Error message notes username/email already taken', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('error');",
+                  "    pm.expect(res.message).to.include('already taken');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Postman Duplicate\",\n  \"username\": \"{{test_username}}\",\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"confirm_password\": \"{{test_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/register.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "register.php"]
+            },
+            "description": "Negative test point: Submitting previously registered username/email returns 409 Conflict."
+          }
+        },
+        {
+          "name": "03. Register - Validation Errors (Negative Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Entity', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Errors dictionary returned', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('error');",
+                  "    pm.expect(res).to.have.property('errors');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"A\",\n  \"username\": \"invalid user!\",\n  \"email\": \"not-an-email\",\n  \"password\": \"123\",\n  \"confirm_password\": \"456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/register.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "register.php"]
+            },
+            "description": "Negative test point: Short full name, invalid username characters, invalid email, short password, and mismatch."
+          }
+        },
+        {
+          "name": "04. Login - Success (Positive Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Session ID extracted and saved to variables', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
+                  "    pm.expect(res).to.have.property('session_id');",
+                  "    pm.collectionVariables.set('session_id', res.session_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login_id\": \"{{test_username}}\",\n  \"password\": \"{{test_password}}\",\n  \"remember\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login.php"]
+            },
+            "description": "Positive test point: Authenticates user, captures session token into {{session_id}} variable."
+          }
+        },
+        {
+          "name": "05. Login - Invalid Credentials (Negative Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Generic error message returned to prevent enumeration', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('error');",
+                  "    pm.expect(res.message).to.include('Invalid login credentials');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login_id\": \"{{test_username}}\",\n  \"password\": \"WrongPassword999!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login.php"]
+            },
+            "description": "Negative test point: Incorrect password returns 401 Unauthorized."
+          }
+        },
+        {
+          "name": "06. Get Profile - Authenticated (Positive Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Profile data matches current user', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
+                  "    pm.expect(res.user.username).to.eql(pm.collectionVariables.get('test_username'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Session-ID",
+                "value": "{{session_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profile.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile.php"]
+            },
+            "description": "Positive test point: Fetches authenticated user profile using X-Session-ID header or session cookie."
+          }
+        },
+        {
+          "name": "07. Get Profile - Unauthorized / No Session (Negative Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profile.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile.php"]
+            },
+            "description": "Negative test point: Requesting protected profile without valid session returns 401 Unauthorized."
+          }
+        },
+        {
+          "name": "08. Update Profile - Success (Positive Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Updated profile fields reflected in response', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
+                  "    pm.expect(res.user.full_name).to.eql('Updated Postman Tester');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Updated Postman Tester\",\n  \"email\": \"{{test_email}}\",\n  \"bio\": \"Senior Automation QA Engineer with Postman.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profile.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile.php"]
+            },
+            "description": "Positive test point: Updates full_name, email, and bio."
+          }
+        },
+        {
+          "name": "09. Change Password - Success (Positive Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "// Update test_password variable to the new password",
+                  "pm.collectionVariables.set('test_password', 'NewPostmanPass2026!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{test_password}}\",\n  \"new_password\": \"NewPostmanPass2026!\",\n  \"confirm_password\": \"NewPostmanPass2026!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/change-password.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "change-password.php"]
+            },
+            "description": "Positive test point: Changes user password and updates collection variable."
+          }
+        },
+        {
+          "name": "10. Logout - Success (Positive Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Logged out message returned', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Session-ID",
+                "value": "{{session_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/logout.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "logout.php"]
+            },
+            "description": "Positive test point: Destroys user session and revokes authentication."
+          }
+        },
+        {
+          "name": "11. Verify Profile Access Denied After Logout (State Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized after logout', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Session-ID",
+                "value": "{{session_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profile.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile.php"]
+            },
+            "description": "State verification test point: Previous session ID cannot access protected data once logged out."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Web Form Endpoints & CSRF",
+      "item": [
+        {
+          "name": "01. Fetch CSRF Token & Session Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Captures CSRF Token', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('csrf_token');",
+                  "    pm.collectionVariables.set('csrf_token', res.csrf_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/csrf-token.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "csrf-token.php"]
+            },
+            "description": "Fetches a live CSRF token to automatically populate {{csrf_token}} for form-based requests."
+          }
+        },
+        {
+          "name": "02. Web Form Register (POST /register.php)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrf_token",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "full_name",
+                  "value": "Web Form Tester",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "web_tester_01",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "web_tester_01@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "PasswordWeb123!",
+                  "type": "text"
+                },
+                {
+                  "key": "confirm_password",
+                  "value": "PasswordWeb123!",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/register.php",
+              "host": ["{{base_url}}"],
+              "path": ["register.php"]
+            },
+            "description": "Browser form registration endpoint. Requires valid CSRF token."
+          }
+        },
+        {
+          "name": "03. Web Form Login (POST /login.php)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrf_token",
+                  "value": "{{csrf_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "login_id",
+                  "value": "alex_tester",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "NewStrongPassword789!",
+                  "type": "text"
+                },
+                {
+                  "key": "remember",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/login.php",
+              "host": ["{{base_url}}"],
+              "path": ["login.php"]
+            },
+            "description": "Browser form login endpoint. Sets session cookie and redirects to dashboard.php."
+          }
+        },
+        {
+          "name": "04. Web Dashboard (GET /dashboard.php)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard.php",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard.php"]
+            },
+            "description": "Protected web UI dashboard. If unauthenticated, redirects to index.php."
+          }
+        },
+        {
+          "name": "05. Web Logout (GET /logout.php)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/logout.php",
+              "host": ["{{base_url}}"],
+              "path": ["logout.php"]
+            },
+            "description": "Web logout endpoint. Destroys session and redirects to index.php?tab=login."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Security & Boundary Point Testing",
+      "item": [
+        {
+          "name": "01. SQL Injection Bypass Attempt (Negative Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('SQL injection fails with 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('No SQL error leakage in response body', function () {",
+                  "    const text = pm.response.text();",
+                  "    pm.expect(text).to.not.include('SQLSTATE');",
+                  "    pm.expect(text).to.not.include('syntax error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login_id\": \"' OR '1'='1' --\",\n  \"password\": \"' OR '1'='1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login.php"]
+            },
+            "description": "Security test point: Prepared statements prevent SQL injection and reject payload with 401 Unauthorized."
+          }
+        },
+        {
+          "name": "02. XSS Payload Injection (Security Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Response might be 201 or 422 depending on regex validation for username",
+                  "pm.test('Username regex rejects dangerous script tags', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"<script>alert('xss')</script>\",\n  \"username\": \"<script>alert(1)</script>\",\n  \"email\": \"xss@test.com\",\n  \"password\": \"SecretPass123!\",\n  \"confirm_password\": \"SecretPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/register.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "register.php"]
+            },
+            "description": "Security test point: Attempts XSS injection. Strict username validation blocks illegal characters."
+          }
+        },
+        {
+          "name": "03. Boundary Test - Password Length < 8 (Boundary Test Point)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Fails on password boundary (< 8 chars)', function () {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.errors.password).to.include('at least 8 characters');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Boundary User\",\n  \"username\": \"boundary_user\",\n  \"email\": \"boundary@test.com\",\n  \"password\": \"1234567\",\n  \"confirm_password\": \"1234567\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/register.php",
+              "host": ["{{base_url}}"],
+              "path": ["api", "register.php"]
+            },
+            "description": "Boundary test point: Exact 7-character password (threshold is 8) triggers 422 error."
+          }
+        }
+      ]
+    }
+  ]
+}
